@@ -1,0 +1,26 @@
+From: Adeii <adeii@dr.com>
+Date: Fri, 2 Sep 2016 00:28:43 +0200
+Subject: [PATCH] Add Huawei Y300 to AICP products
+---
+ products/u8833.mk | +++++++++++++++++++++++++++++++++++
+ 1 file changed, 12 insertions(+)
+ create mode 100644 products/u8833.mk
+
+diff --git a/products/u8833.mk b/products/u8833.mk
+new file mode 100644
+index 0000000..34fa285
+--- /dev/null
++++ b/products/u8833.mk
+@@ -0,0 +1,12 @@
++$(call inherit-product, vendor/aicp/configs/common.mk)
++
++# Inherit device configuration
++$(call inherit-product, device/huawei/u8833/full_u8833.mk)
++
++# Correct boot animation size for the screen
++TARGET_SCREEN_HEIGHT := 800
++TARGET_SCREEN_WIDTH := 480
++
++# Device name
++PRODUCT_NAME := aicp_u8833
++PRODUCT_DEVICE := u8833
