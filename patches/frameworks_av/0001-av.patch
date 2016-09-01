@@ -1,0 +1,190 @@
+diff --git a/include/media/stagefright/MediaCodecSource.h b/include/media/stagefright/MediaCodecSource.h
+old mode 100644
+new mode 100755
+index edd6494..7c0ba3d
+--- a/include/media/stagefright/MediaCodecSource.h
++++ b/include/media/stagefright/MediaCodecSource.h
+@@ -40,8 +40,11 @@ class MetaData;
+ struct MediaCodecSource : public MediaSource,
+                           public MediaBufferObserver {
+     enum FlagBits {
+-        FLAG_USE_SURFACE_INPUT      = 1,
+-        FLAG_USE_METADATA_INPUT     = 2,
++        FLAG_USE_SURFACE_INPUT           = 1,
++        FLAG_USE_METADATA_INPUT          = 2,
++#ifdef USE_SUBMIT_ONE_INPUT_BUFFER			
++		FLAG_USE_SUBMIT_ONE_INPUT_BUFFER = 3,
++#endif		
+     };
+ 
+     static sp<MediaCodecSource> Create(
+diff --git a/media/libmedia/Android.mk b/media/libmedia/Android.mk
+old mode 100644
+new mode 100755
+index 139d6f8..f25defc
+--- a/media/libmedia/Android.mk
++++ b/media/libmedia/Android.mk
+@@ -76,7 +76,7 @@ LOCAL_SRC_FILES:= \
+ LOCAL_SRC_FILES += ../libnbaio/roundup.c
+ 
+ ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
+-ifneq ($(filter msm7x30 msm8660 msm8960,$(TARGET_BOARD_PLATFORM)),)
++ifneq ($(filter msm7x27a msm7x30 msm8660 msm8960,$(TARGET_BOARD_PLATFORM)),)
+ ifeq ($(BOARD_USES_LEGACY_ALSA_AUDIO),true)
+ LOCAL_SRC_FILES += \
+     IDirectTrack.cpp \
+diff --git a/media/libmediaplayerservice/Android.mk b/media/libmediaplayerservice/Android.mk
+old mode 100644
+new mode 100755
+index 8f06c55..c906412
+--- a/media/libmediaplayerservice/Android.mk
++++ b/media/libmediaplayerservice/Android.mk
+@@ -73,6 +73,10 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_EXTN_FLAC_DECODER)),true)
+ endif
+ endif
+ 
++ifeq ($(TARGET_BOARD_PLATFORM),msm7x27a)
++    LOCAL_CFLAGS += -DUSE_SUBMIT_ONE_INPUT_BUFFER
++endif
++
+ include $(BUILD_SHARED_LIBRARY)
+ 
+ include $(call all-makefiles-under,$(LOCAL_PATH))
+diff --git a/media/libmediaplayerservice/StagefrightRecorder.cpp b/media/libmediaplayerservice/StagefrightRecorder.cpp
+old mode 100644
+new mode 100755
+diff --git a/media/libstagefright/ACodec.cpp b/media/libstagefright/ACodec.cpp
+old mode 100644
+new mode 100755
+index 607b7b0..707d7f7
+--- a/media/libstagefright/ACodec.cpp
++++ b/media/libstagefright/ACodec.cpp
+@@ -603,12 +603,16 @@ status_t ACodec::allocateBuffersOnPort(OMX_U32 portIndex) {
+     CHECK(mBuffers[portIndex].isEmpty());
+ 
+     status_t err;
+-    if (mNativeWindow != NULL && portIndex == kPortIndexOutput) {
+-        if (mStoreMetaDataInOutputBuffers) {
+-            err = allocateOutputMetaDataBuffers();
+-        } else {
+-            err = allocateOutputBuffersFromNativeWindow();
+-        }
++     if (mNativeWindow != NULL && portIndex == kPortIndexOutput) {
++#ifdef NO_METADATA_IN_VIDEO_BUFFERS
++        err = allocateOutputBuffersFromNativeWindow();
++#else
++         if (mStoreMetaDataInOutputBuffers) {
++             err = allocateOutputMetaDataBuffers();
++         } else {
++             err = allocateOutputBuffersFromNativeWindow();
++         }
++#endif
+     } else {
+         OMX_PARAM_PORTDEFINITIONTYPE def;
+         InitOMXParams(&def);
+@@ -634,9 +638,7 @@ status_t ACodec::allocateBuffersOnPort(OMX_U32 portIndex) {
+ 
+             for (OMX_U32 i = 0; i < def.nBufferCountActual; ++i) {
+                 sp<IMemory> mem = mDealer[portIndex]->allocate(def.nBufferSize);
+-                if (mem == NULL || mem->pointer() == NULL) {
+-                    return NO_MEMORY;
+-                }
++                CHECK(mem.get() != NULL);
+ 
+                 BufferInfo info;
+                 info.mStatus = BufferInfo::OWNED_BY_US;
+@@ -1007,9 +1009,7 @@ status_t ACodec::allocateOutputMetaDataBuffers() {
+ 
+         sp<IMemory> mem = mDealer[kPortIndexOutput]->allocate(
+                 sizeof(struct VideoDecoderOutputMetaData));
+-        if (mem == NULL || mem->pointer() == NULL) {
+-            return NO_MEMORY;
+-        }
++        CHECK(mem.get() != NULL);
+         info.mData = new ABuffer(mem->pointer(), mem->size());
+ 
+         // we use useBuffer for metadata regardless of quirks
+diff --git a/media/libstagefright/Android.mk b/media/libstagefright/Android.mk
+old mode 100644
+new mode 100755
+index 4b4a8e9..ff50790
+--- a/media/libstagefright/Android.mk
++++ b/media/libstagefright/Android.mk
+@@ -126,7 +126,7 @@ LOCAL_SHARED_LIBRARIES := \
+         libpowermanager
+ 
+ ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
+-ifneq ($(filter msm7x30 msm8660 msm8960,$(TARGET_BOARD_PLATFORM)),)
++ifneq ($(filter msm7x27a msm7x30 msm8660 msm8960,$(TARGET_BOARD_PLATFORM)),)
+ ifeq ($(BOARD_USES_LEGACY_ALSA_AUDIO),true)
+    ifeq ($(USE_TUNNEL_MODE),true)
+         LOCAL_CFLAGS += -DUSE_TUNNEL_MODE
+@@ -224,7 +224,7 @@ LOCAL_SHARED_LIBRARIES += \
+         libstagefright_foundation \
+         libdl
+ 
+-LOCAL_CFLAGS += -Wno-multichar
++LOCAL_CFLAGS += -Wno-multichar -Wno-unused-parameter
+ 
+ ifeq ($(DTS_CODEC_M_), true)
+   LOCAL_SRC_FILES+= DTSUtils.cpp
+@@ -260,10 +260,15 @@ ifeq ($(BOARD_USE_SEIREN_AUDIO), true)
+ LOCAL_CFLAGS += -DUSE_SEIREN_AUDIO
+ endif
+ 
++ifeq ($(TARGET_BOARD_PLATFORM),msm7x27a)
++    LOCAL_CFLAGS += -DUSE_SUBMIT_ONE_INPUT_BUFFER
++	LOCAL_CFLAGS += -DNO_METADATA_IN_VIDEO_BUFFERS
++endif
++
+ LOCAL_MODULE:= libstagefright
+ 
+ LOCAL_MODULE_TAGS := optional
+ 
+ include $(BUILD_SHARED_LIBRARY)
+ 
+-include $(call all-makefiles-under,$(LOCAL_PATH))
++include $(call all-makefiles-under,$(LOCAL_PATH))
+\ No newline at end of file
+diff --git a/media/libstagefright/CameraSource.cpp b/media/libstagefright/CameraSource.cpp
+old mode 100644
+new mode 100755
+index 006ef5e..0ff62cc
+--- a/media/libstagefright/CameraSource.cpp
++++ b/media/libstagefright/CameraSource.cpp
+@@ -571,12 +571,13 @@ status_t CameraSource::initWithCameraAccess(
+     // By default, do not store metadata in video buffers
+     mIsMetaDataStoredInVideoBuffers = false;
+     mCamera->storeMetaDataInBuffers(false);
++#ifndef NO_METADATA_IN_VIDEO_BUFFERS
+     if (storeMetaDataInVideoBuffers) {
+         if (OK == mCamera->storeMetaDataInBuffers(true)) {
+             mIsMetaDataStoredInVideoBuffers = true;
+         }
+     }
+-
++#endif
+     int64_t glitchDurationUs = (1000000LL / mVideoFrameRate);
+     if (glitchDurationUs > mGlitchDurationThresholdUs) {
+         mGlitchDurationThresholdUs = glitchDurationUs;
+diff --git a/media/libstagefright/MediaCodecSource.cpp b/media/libstagefright/MediaCodecSource.cpp
+old mode 100644
+new mode 100755
+index 7c81570..203a222
+--- a/media/libstagefright/MediaCodecSource.cpp
++++ b/media/libstagefright/MediaCodecSource.cpp
+@@ -431,7 +431,13 @@ status_t MediaCodecSource::initEncoder() {
+     if (mFlags & FLAG_USE_METADATA_INPUT) {
+         mOutputFormat->setInt32("store-metadata-in-buffers", 1);
+     }
+-
++	
++#ifdef USE_SUBMIT_ONE_INPUT_BUFFER	
++	if (mFlags & FLAG_USE_SUBMIT_ONE_INPUT_BUFFER) {
++        mOutputFormat->setInt32("Only-Submit-One-Input-Buffer-At-One-Time", 1);
++    }
++#endif
++	
+     if (mFlags & FLAG_USE_SURFACE_INPUT) {
+         mOutputFormat->setInt32("create-input-buffers-suspended", 1);
+     }
