@@ -53,7 +53,7 @@ diff --git a/server/CommandListener.cpp b/server/CommandListener.cpp
 index d6d7ca6..b29bd7f 100644
 --- a/server/CommandListener.cpp
 +++ b/server/CommandListener.cpp
-@@ -873,9 +873,18 @@ int CommandListener::SoftapCmd::runCommand(SocketClient *cli,
+@@ -888,9 +888,18 @@ int CommandListener::SoftapCmd::runCommand(SocketClient *cli,
                       "Missing argument in a SoftAP command", false);
          return 0;
      }
@@ -77,10 +77,11 @@ diff --git a/server/SoftapController.h b/server/SoftapController.h
 index fd53939..a2cc137 100755
 --- a/server/SoftapController.h
 +++ b/server/SoftapController.h
-@@ -34,6 +34,10 @@ public:
+@@ -33,7 +33,10 @@ class SoftapController {
+ public:
      SoftapController(SocketListener *sl);
      virtual ~SoftapController();
- 
+- 
 +#ifdef ATH_WLAN
 +    int startDriver(const char *iface);
 +    int stopDriver(const char *iface);
@@ -88,7 +89,7 @@ index fd53939..a2cc137 100755
      int startSoftap();
      int stopSoftap();
      bool isSoftapStarted();
-@@ -46,6 +50,10 @@ private:
+@@ -46,6 +49,10 @@ private:
      int mThreadErr;
      int mHostapdFlag;
  #endif
@@ -923,5 +924,4 @@ index 0000000..34fa285
 +    return ResponseCode::SoftapStatusResult;
 +} 
 -- 
-2.2.1
-
+2.2.2
