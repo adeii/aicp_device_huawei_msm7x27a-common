@@ -1,0 +1,111 @@
+diff --git a/core/clang/HOST_x86_common.mk b/core/clang/HOST_x86_common.mk
+old mode 100644
+new mode 100755
+diff --git a/core/combo/arch/arm/armv7-a-neon.mk b/core/combo/arch/arm/armv7-a-neon.mk
+old mode 100644
+new mode 100755
+index a49b7f0..8879043
+--- a/core/combo/arch/arm/armv7-a-neon.mk
++++ b/core/combo/arch/arm/armv7-a-neon.mk
+@@ -31,7 +31,7 @@ ifeq ($(strip $(TARGET_$(combo_2nd_arch_prefix)CPU_VARIANT)),cortex-a7)
+ 		-Wl,--no-fix-cortex-a8
+ else
+ ifeq ($(strip $(TARGET_$(combo_2nd_arch_prefix)CPU_VARIANT)),cortex-a5)
+-	arch_variant_cflags := -mcpu=cortex-a7
++	arch_variant_cflags := -mcpu=cortex-a5
+ 	arch_variant_ldflags := \
+ 		-Wl,--no-fix-cortex-a8
+ else
+diff --git a/core/qcom_target.mk b/core/qcom_target.mk
+old mode 100644
+new mode 100755
+index c00cc3a..b7ed2ba
+--- a/core/qcom_target.mk
++++ b/core/qcom_target.mk
+@@ -1,14 +1,17 @@
+ # Target-specific configuration
+ 
+ # Populate the qcom hardware variants in the project pathmap.
++define qcom-set-path-variant
++$(call project-set-path-variant,qcom-$(2),TARGET_QCOM_$(1)_VARIANT,hardware/qcom/$(2))
++endef
+ define ril-set-path-variant
+ $(call project-set-path-variant,ril,TARGET_RIL_VARIANT,hardware/$(1))
+ endef
+-
+-# Set device-specific HALs into project pathmap
+-define set-device-specific-path
+-$(call project-set-path,qcom-$(2),$(strip $(if $(USE_DEVICE_SPECIFIC_$(1)), \
+-    $(TARGET_DEVICE_DIR)/$(2), $(3))))
++define gps-hal-set-path-variant
++$(call project-set-path-variant,gps-hal,TARGET_GPS_HAL_PATH,$(1))
++endef
++define loc-api-set-path-variant
++$(call project-set-path-variant,loc-api,TARGET_LOC_API_PATH,$(1))
+ endef
+ 
+ ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
+@@ -61,20 +64,26 @@ ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
+     endif
+ 
+ $(call project-set-path,qcom-audio,hardware/qcom/audio-caf/$(QCOM_HARDWARE_VARIANT))
+-$(call set-device-specific-path,CAMERA,camera,hardware/qcom/camera)
++ifeq ($(USE_DEVICE_SPECIFIC_CAMERA),true)
++$(call project-set-path,qcom-camera,$(TARGET_DEVICE_DIR)/camera)
++else
++$(call qcom-set-path-variant,CAMERA,camera)
++endif
+ $(call project-set-path,qcom-display,hardware/qcom/display-caf/$(QCOM_HARDWARE_VARIANT))
+-$(call set-device-specific-path,GPS,gps,hardware/qcom/gps)
++$(call qcom-set-path-variant,GPS,gps)
+ $(call project-set-path,qcom-media,hardware/qcom/media-caf/$(QCOM_HARDWARE_VARIANT))
+-$(call set-device-specific-path,SENSORS,sensors,hardware/qcom/sensors)
++$(call qcom-set-path-variant,SENSORS,sensors)
+ $(call ril-set-path-variant,ril)
+-$(call set-device-specific-path,LOC_API,loc-api,vendor/qcom/opensource/location)
++$(call loc-api-set-path-variant,vendor/qcom/opensource/location)
++$(call gps-hal-set-path-variant,hardware/qcom/gps)
+ else
+ $(call project-set-path,qcom-audio,hardware/qcom/audio/default)
+-$(call project-set-path,qcom-camera,hardware/qcom/camera)
++$(call qcom-set-path-variant,CAMERA,camera)
+ $(call project-set-path,qcom-display,hardware/qcom/display/$(TARGET_BOARD_PLATFORM))
+-$(call project-set-path,qcom-gps,hardware/qcom/gps)
++$(call qcom-set-path-variant,GPS,gps)
+ $(call project-set-path,qcom-media,hardware/qcom/media/default)
+-$(call project-set-path,qcom-sensors,hardware/qcom/sensors)
++$(call qcom-set-path-variant,SENSORS,sensors)
+ $(call ril-set-path-variant,ril)
+-$(call project-set-path,loc-api,vendor/qcom/opensource/location)
++$(call loc-api-set-path-variant,vendor/qcom/opensource/location)
++$(call gps-hal-set-path-variant,hardware/qcom/gps)
+ endif
+diff --git a/core/qcom_utils.mk b/core/qcom_utils.mk
+old mode 100644
+new mode 100755
+diff --git a/envsetup.sh b/envsetup.sh
+index 5ab7693..a03e379 100644
+--- a/envsetup.sh
++++ b/envsetup.sh
+@@ -526,7 +526,7 @@ function mka() {
+             make -j `sysctl hw.ncpu|cut -d" " -f2` "$@"
+             ;;
+         *)
+-            schedtool -B -n 1 -e ionice -n 1 make -j$(cat /proc/cpuinfo | grep "^processor" | wc -l) "$@"
++          schedtool -B -n 1 -e ionice -n 1 make -j$(cat /proc/cpuinfo | grep "^processor" | wc -l) "$@"
+             ;;
+     esac
+ }
+diff --git a/target/product/core_minimal.mk b/target/product/core_minimal.mk
+index 89b1cba..cd67e24 100644
+--- a/target/product/core_minimal.mk
++++ b/target/product/core_minimal.mk
+@@ -110,4 +110,8 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
+ PRODUCT_COPY_FILES += \
+     system/core/rootdir/init.zygote32.rc:root/init.zygote32.rc
+ 
++PRODUCT_PACKAGES += \
++    libwebviewchromium_plat_support \
++    libwebviewchromium_loader
++
+ $(call inherit-product, $(SRC_TARGET_DIR)/product/base.mk)
