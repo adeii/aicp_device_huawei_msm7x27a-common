@@ -1,0 +1,212 @@
+diff --git a/res/values-hu/cm_strings.xml b/res/values-hu/cm_strings.xml
+index cd3e620..0b8649c 100644
+--- a/res/values-hu/cm_strings.xml
++++ b/res/values-hu/cm_strings.xml
+@@ -920,7 +920,7 @@
+   <string name="qs_dynamic_tile_next_alarm">Következő riasztás</string>
+   <string name="qs_dynamic_tile_ime_selector">IME választó</string>
+   <string name="qs_dynamic_tile_su">Rendszergazda hozzáférés</string>
+-    <string name="qs_dynamic_tile_adb" translatable="false">ADB</string>
++  <string name="qs_dynamic_tile_adb">ADB</string>
+ 
+   <string name="qs_main_tiles_title">Első sor nagyítása</string>
+   <string name="qs_main_tiles_summary_on">Az első sorban két fő csempe</string>
+@@ -934,8 +934,8 @@
+   <string name="qs_brightness_slider_title">Fényerő csúszka</string>
+   <string name="qs_brightness_slider_enabled">Engedélyez</string>
+   <string name="qs_brightness_slider_disabled">Tiltva</string>
+-    <string name="colors_title">Színek</string>
+-    <string name="category_colors_title">Színek testreszabása</string>
++  <string name="colors_title">Színek</string>
++  <string name="category_colors_title">Színek testreszabása</string>
+ 
+     <!-- Gesture Settings -->
+     <!-- Settings main menu entry -->
+@@ -958,7 +958,7 @@
+     <string name="wifi_auto_config_priorities">Automatikus prioritás</string>
+ 
+     <!-- About phone settings screen, setting option dialog title to show regulatory information [CHAR LIMIT=25] -->
+-    <string name="regulatory_information_dialog_title" translatable="false">@string/regulatory_information</string>
++    <string name="regulatory_information_dialog_title">@string/regulatory_information</string>
+ 
+     <!-- SAR information -->
+   <string name="maximum_head_level">Fej: %1$s W/kg</string>
+diff --git a/res/values/cm_strings.xml b/res/values/cm_strings.xml
+old mode 100644
+new mode 100755
+index a0ea1d8..fc8f076
+--- a/res/values/cm_strings.xml
++++ b/res/values/cm_strings.xml
+@@ -283,8 +283,28 @@
+ 
+     <!-- Privacy Settings Header item -->
+     <string name="privacy_settings_cyanogenmod_title">Privacy</string>
++    <string name="privacy_settings_cyanogenmod_category" translatable="false">CyanogenMod</string>
++
++    <!-- General strings -->
++    <string name="ok">OK</string>
++    <string name="reset">Reset</string>
++    <string name="help">Help</string>
++    <string name="add">Add</string>
++    <string name="help">Help</string>
++    <string name="attention">Attention</string>
++    <string name="enabled">Enabled</string>
++    <string name="disabled">Disabled</string>
++    <string name="default_string">Default</string>
++    <string name="choose_app">Choose application</string>
++    <string name="reset_message">Reset all entries to default?</string>
++    <string name="additional_options_title">Additional options</string>
+ 
+     <!-- Privacy Guard -->
++    <string name="app_security_title">App security</string>
++    <string name="privacy_guard_switch_label">Enable Privacy Guard</string>
++    <string name="privacy_guard_dlg_title">Enable Privacy Guard?</string>
++    <string name="privacy_guard_dlg_text">When Privacy Guard is enabled, the app will not be able to access personal data such as contacts, messages or call logs.</string>
++    <string name="privacy_guard_dlg_system_app_text">When enabling Privacy Guard for a built-in app, the app will not be able to access or provide personal data. This may cause other apps to misbehave.</string>
+     <string name="privacy_guard_default_title">Enabled by default</string>
+     <string name="privacy_guard_default_summary">Enable by default for newly-installed apps</string>
+     <string name="privacy_guard_manager_title">Privacy Guard</string>
+@@ -296,6 +316,8 @@
+     <string name="privacy_guard_help_text">In this screen you can choose which apps Privacy Guard should be active for by simply tapping on them. Selected apps will not be able to access your personal data such as contacts, messages or call logs. Long pressing an app\'s entry opens its app details screen.\n\nBuilt-in apps are not shown by default but can be revealed by selecting the respective menu option.</string>
+     <string name="privacy_guard_manager_show_system_apps">Show built-in apps</string>
+     <string name="privacy_guard_advanced_settings_title">Advanced</string>
++    <string name="privacy_guard_notification_title">Notification</string>
++    <string name="privacy_guard_notifiation_summary">Show notification if privacy guard is active.</string>
+ 
+     <string name="app_ops_btn_text">Modify</string>
+ 
+@@ -419,6 +441,13 @@
+     <string name="root_access_adb">ADB only</string>
+     <string name="root_access_all">Apps and ADB</string>
+ 
++    <!-- Vold Switchable Pair -->
++    <string name="storage_switch_title">Use external SD as primary</string>
++    <string name="storage_switch_summary_off">Using expanded internal storage for apps and media</string>
++    <string name="storage_switch_summary_on">Using SD Card for apps and media</string>
++    <string name="reboot_prompt_title">Reboot required</string>
++   <string name="reboot_prompt_message">In order to apply the changed configuration, a reboot is required.\n\nDo you want to reboot now?</string>
++
+     <!-- High touch sensitivity -->
+     <string name="high_touch_sensitivity_title">High touch sensitivity</string>
+     <string name="high_touch_sensitivity_summary">Increase touchscreen sensitivity so it can be used while wearing gloves</string>
+diff --git a/res/xml/device_info_memory.xml b/res/xml/device_info_memory.xml
+old mode 100644
+new mode 100755
+diff --git a/src/com/android/settings/deviceinfo/Memory.java b/src/com/android/settings/deviceinfo/Memory.java
+old mode 100644
+new mode 100755
+index 2935cc6..e2d562c
+--- a/src/com/android/settings/deviceinfo/Memory.java
++++ b/src/com/android/settings/deviceinfo/Memory.java
+@@ -32,21 +32,25 @@ import android.hardware.usb.UsbManager;
+ import android.os.Bundle;
+ import android.os.Environment;
+ import android.os.IBinder;
++import android.os.PowerManager;
+ import android.os.RemoteException;
+ import android.os.ServiceManager;
+ import android.os.UserHandle;
++import android.os.SystemProperties;
+ import android.os.UserManager;
+ import android.os.storage.IMountService;
+ import android.os.storage.StorageEventListener;
+ import android.os.storage.StorageManager;
+ import android.os.storage.StorageVolume;
+ import android.os.SystemProperties;
++import android.preference.SwitchPreference;
+ import android.preference.ListPreference;
+ import android.preference.Preference;
+ import android.preference.PreferenceCategory;
+ import android.preference.PreferenceScreen;
+ import android.preference.Preference.OnPreferenceChangeListener;
+ import android.provider.Settings;
++import android.text.TextUtils;
+ import android.util.Log;
+ import android.view.Menu;
+ import android.view.MenuInflater;
+@@ -98,6 +102,10 @@ public class Memory extends SettingsPreferenceFragment
+     private boolean mRemoveableStorage;
+ 
+     private ArrayList<StorageVolumePreferenceCategory> mCategories = Lists.newArrayList();
++    private static final String KEY_SWITCH_STORAGE = "key_switch_storage";
++    private static final String VOLD_SWITCH_PERSIST_PROP = "persist.sys.vold.switchexternal";
++    private static final String VOLD_SWITCHABLEPAIR_PROP = "persist.sys.vold.switchablepair";
++    private SwitchPreference mSwitchStoragePref;
+ 
+     @Override
+     public void onCreate(Bundle icicle) {
+@@ -112,6 +120,27 @@ public class Memory extends SettingsPreferenceFragment
+ 
+         addPreferencesFromResource(R.xml.device_info_memory);
+ 
++	String voldswitch = SystemProperties.get(VOLD_SWITCH_PERSIST_PROP, "0");
++        mSwitchStoragePref = (SwitchPreference) findPreference(KEY_SWITCH_STORAGE);
++        mSwitchStoragePref.setChecked("1".equals(voldswitch));
++        if (!Environment.isExternalStorageEmulated()) {
++            Log.i(TAG, "Checking to see if vold switch is possible on this device.");
++            String PRIMARY_STORAGE = System.getenv("EXTERNAL_STORAGE");
++            String SECONDARY_STORAGE = System.getenv("SECONDARY_STORAGE");
++            if (!TextUtils.isEmpty(PRIMARY_STORAGE) && !TextUtils.isEmpty(SECONDARY_STORAGE)) {
++                SystemProperties.set(VOLD_SWITCHABLEPAIR_PROP, PRIMARY_STORAGE + ',' +
++                        SECONDARY_STORAGE);
++                Log.i(TAG, "Setting persist.sys.vold.switchablepair=" + PRIMARY_STORAGE + ',' +
++                        SECONDARY_STORAGE);
++            } else {
++                Log.i(TAG, "Vold switch not possible on this device.");
++            }
++        }
++
++        if (SystemProperties.get(VOLD_SWITCHABLEPAIR_PROP).equals("")) {
++            removePreference(KEY_SWITCH_STORAGE);
++        }
++
+         addCategory(StorageVolumePreferenceCategory.buildForInternal(context));
+ 
+         final StorageVolume[] storageVolumes = mStorageManager.getVolumeList();
+@@ -233,8 +262,8 @@ public class Memory extends SettingsPreferenceFragment
+     public void onPrepareOptionsMenu(Menu menu) {
+         final MenuItem usb = menu.findItem(R.id.storage_usb);
+         UserManager um = (UserManager)getActivity().getSystemService(Context.USER_SERVICE);
+-        boolean usbItemVisible =
+-                !um.hasUserRestriction(UserManager.DISALLOW_USB_FILE_TRANSFER);
++        boolean usbItemVisible = !isMassStorageEnabled()
++                && !um.hasUserRestriction(UserManager.DISALLOW_USB_FILE_TRANSFER);
+         usb.setVisible(usbItemVisible);
+         final MenuItem advanced = menu.findItem(R.id.storage_options);
+         advanced.setVisible(mRemoveableStorage);
+@@ -282,7 +311,13 @@ public class Memory extends SettingsPreferenceFragment
+ 
+     @Override
+     public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
+-        if (StorageVolumePreferenceCategory.KEY_CACHE.equals(preference.getKey())) {
++        if(preference == mSwitchStoragePref) {
++            Log.d(TAG,"Setting persist.sys.vold.switchexternal to "+(
++                    mSwitchStoragePref.isChecked() ? "1" : "0"));
++            SystemProperties.set(VOLD_SWITCH_PERSIST_PROP,
++                    mSwitchStoragePref.isChecked() ? "1" : "0");
++            showRebootPrompt();
++        } else if (StorageVolumePreferenceCategory.KEY_CACHE.equals(preference.getKey())) {
+             ConfirmClearCacheFragment.show(this);
+             return true;
+         }
+@@ -622,4 +657,20 @@ public class Memory extends SettingsPreferenceFragment
+             }
+         };
+ 
++		private void showRebootPrompt() {
++        AlertDialog dialog = new AlertDialog.Builder(getActivity())
++                .setTitle(R.string.reboot_prompt_title)
++                .setMessage(R.string.reboot_prompt_message)
++                .setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
++                    @Override
++                    public void onClick(DialogInterface dialog, int which) {
++                        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
++                        pm.reboot(null);
++                    }
++                })
++                .setNegativeButton(R.string.no, null)
++                .create();
++
++        dialog.show();
++    }
+ }
